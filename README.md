@@ -1,6 +1,6 @@
 # LayerManager
 
-A simple tool for reordering, merging and modifying unity layers. Updates game objects, components and assets to match.
+The layer manager is a simple tool for reordering, merging and modifying unity layers. Once set up it updates settings, game objects, components and assets to match.
 
 ## The Editor
 
