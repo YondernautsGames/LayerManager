@@ -6,7 +6,7 @@ A simple tool for reordering, merging and modifying unity layers. Updates game o
 
 To open the layer manager, select **"Tools/Yondernauts/Layer Manager"**. This will open the editor in a new window that looks like the image below:
 
-![Editor](/images/editor.jpg)
+![Editor](/Images/editor.jpg?raw=true)
 
 The layer manager supports three operations from the main window:
 + Rename
