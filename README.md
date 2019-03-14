@@ -6,7 +6,7 @@ A simple tool for reordering, merging and modifying unity layers. Updates game o
 
 To open the layer manager, select **"Tools/Yondernauts/Layer Manager"**. This will open the editor in a new window that looks like the image below:
 
-![Editor](/images/editor.jpg?raw=true)
+![Editor](/images/editor.jpg)
 
 The layer manager supports three operations from the main window:
 + Rename
@@ -39,7 +39,7 @@ For example, if A redirects to B and B is redirected to point at C, then both A 
 
 The physics and physics 2D layer collision matrices define whether objects on different layers can collide with each other. These can be accessed from **"Edit/Project Settings/Physics"** and **"Edit/Project Settings/Physics 2D"** and look like this:
 
-![Layer Collision Matrix](/images/collision-matrix.jpg?raw=true)
+![Layer Collision Matrix](/images/collision-matrix.jpg)
 
 The layer manager will update both of these collision matrices to reflect renamed and reordered layers, but **not** redirected layers. This is because it is impossible to know the desired result in all but the simplest of cases. If you redirect layers and make use of the physics layer collision matrix then you will need to tweak this manually after applying your layer modifications.
 
@@ -47,7 +47,7 @@ The layer manager will update both of these collision matrices to reflect rename
 
 Once the modifications have been completed you will have the option of saving a layer map asset. In the inspector this asset has 2 sections:
 
-![Layer Map](/images/layer-map.jpg?raw=true)
+![Layer Map](/images/layer-map.jpg)
 
 The **Transform Layer Index** section will give you the new layer index when an old layer index is entered in the left hand text field.
 
