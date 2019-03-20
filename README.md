@@ -2,6 +2,8 @@
 
 The layer manager is a simple tool for reordering, merging and modifying unity layers. Once set up it updates settings, game objects, components and assets to match.
 
+This demo project has been created using Unity version 2018.1.0f2
+
 ## The Editor
 
 To open the layer manager, select **"Tools/Yondernauts/Layer Manager"**. This will open the editor in a new window that looks like the image below:
