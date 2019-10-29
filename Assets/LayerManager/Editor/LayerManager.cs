@@ -183,7 +183,7 @@ namespace Yondernauts.LayerManager
             }
         }
 
-        void OnEditingGUI ()
+        void OnEditingGUI()
         {
             if (m_LayerList == null || m_LayerList.serializedProperty == null)
             {
@@ -192,7 +192,7 @@ namespace Yondernauts.LayerManager
                     m_SkipRepaint = true;
                 return;
             }
-            
+
             // Use a scroll view to fit it all in
             m_EditScroll = EditorGUILayout.BeginScrollView(m_EditScroll);
 
@@ -223,7 +223,7 @@ namespace Yondernauts.LayerManager
 
             // Reset modifications
             if (GUI.Button(r, "Reset Layer Moditications"))
-                ResetData();            
+                ResetData();
 
             // End the scroll view
             EditorGUILayout.EndScrollView();
@@ -232,7 +232,7 @@ namespace Yondernauts.LayerManager
             m_Data.ApplyModifiedProperties();
         }
 
-        void OnConfirmationGUI ()
+        void OnConfirmationGUI()
         {
             // Show warning
             EditorGUILayout.HelpBox("Warning: This process is not reversible and modifies a lot of files.\n\nMake sure all scenes are saved (including the open scene) and you have an up to date backup in case anything gose wrong.", MessageType.Warning);
@@ -246,7 +246,7 @@ namespace Yondernauts.LayerManager
                 m_State = ManagerState.Editing;
         }
 
-        void OnProcessingGUI ()
+        void OnProcessingGUI()
         {
             // Show info
             EditorGUILayout.HelpBox("Processing layer modifications. Do not close this window until completed.", MessageType.Info);
@@ -267,8 +267,8 @@ namespace Yondernauts.LayerManager
                 Repaint();
             }
         }
-        
-        void OnCompleteGUI ()
+
+        void OnCompleteGUI()
         {
             // Show completion report
             EditorGUILayout.HelpBox(m_CompletionReport, MessageType.Info);
@@ -309,7 +309,7 @@ namespace Yondernauts.LayerManager
                 GUI.enabled = true;
         }
 
-        string BuildErrorReport (bool url)
+        string BuildErrorReport(bool url)
         {
             StringBuilder result = new StringBuilder("Layer Manager failed with the following errors:");
             foreach (var err in m_Errors)
@@ -327,10 +327,10 @@ namespace Yondernauts.LayerManager
         private void DrawLayerMapElement(Rect rect, int index, bool isActive, bool isFocused)
         {
             var entry = m_Data.GetEntryFromIndex(index);
-            
+
             rect.height = lineHeight;
             rect.y += lineSpacing;
-            
+
             // Draw top label (modified & new index)
             EditorGUI.LabelField(rect, new GUIContent(string.Format("Modified [{0:D2}]", index + 8)), EditorStyles.boldLabel);
 
@@ -431,13 +431,13 @@ namespace Yondernauts.LayerManager
             }
         }
 
-        void OnLayerMapReorder (ReorderableList list)
+        void OnLayerMapReorder(ReorderableList list)
         {
             dirty = true;
             m_Data.RebuildSerializedEntries();
         }
 
-        void ResetData ()
+        void ResetData()
         {
             if (m_Data != null)
             {
@@ -517,7 +517,7 @@ namespace Yondernauts.LayerManager
             m_State = ManagerState.Processing;
         }
 
-        void IncrementLayerModifications ()
+        void IncrementLayerModifications()
         {
             if (m_AssetPaths == null)
                 return;
@@ -527,7 +527,7 @@ namespace Yondernauts.LayerManager
                 m_CurrentAssetPath = 0;
                 return;
             }
-            
+
             string path = m_AssetPaths[m_CurrentAssetPath];
             try
             {
@@ -536,30 +536,53 @@ namespace Yondernauts.LayerManager
                     // Process prefab
                     if (path.EndsWith(".prefab"))
                     {
-                        // Record object & component counts to check if modified
-                        int objCount = m_ObjectCount;
-                        int compCount = m_ComponentCount;
+                        try
+                        {
+                            // Record object & component counts to check if modified
+                            int objCount = m_ObjectCount;
+                            int compCount = m_ComponentCount;
 
-                        // Load the prefab asset and modify
-                        var obj = (GameObject)AssetDatabase.LoadMainAssetAtPath(path);
-                        ProcessGameObject(obj, false);
+                            // Load the prefab asset and modify
+                            var obj = (GameObject)AssetDatabase.LoadMainAssetAtPath(path);
+                            if (obj != null)
+                            {
+                                ProcessGameObject(obj, false);
 
-                        // Prefab was modified
-                        if (m_ObjectCount > objCount || m_ComponentCount > compCount)
-                            ++m_PrefabCount;
-                    } 
+                                // Prefab was modified
+                                if (m_ObjectCount > objCount || m_ComponentCount > compCount)
+                                    ++m_PrefabCount;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            m_Errors.Add(string.Format("Encountered error processing prefab: \"{0}\", message: {1}", path, e.Message));
+                        }
+                    }
                     else
                     {
                         // Process ScriptableObject asset
                         if (path.EndsWith(".asset"))
                         {
-                            // Load the scriptable object (and children) and modify
-                            var objects = AssetDatabase.LoadAllAssetsAtPath(path);
-                            foreach (var obj in objects)
+                            try
                             {
-                                SerializedObject so = new SerializedObject(obj);
-                                if (ProcessSerializedObject(so))
-                                    ++m_AssetCount;
+                                // Load the scriptable object (and children) and modify
+                                var objects = AssetDatabase.LoadAllAssetsAtPath(path);
+                                if (objects != null)
+                                {
+                                    foreach (var obj in objects)
+                                    {
+                                        if (obj == null)
+                                            continue;
+
+                                        SerializedObject so = new SerializedObject(obj);
+                                        if (ProcessSerializedObject(so))
+                                            ++m_AssetCount;
+                                    }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                m_Errors.Add(string.Format("Encountered error processing Scriptable Object: \"{0}\", message: {1}", path, e.Message));
                             }
                         }
                         else
@@ -567,25 +590,35 @@ namespace Yondernauts.LayerManager
                             // Process scene
                             if (path.EndsWith(".unity"))
                             {
-                                // Record object & component counts to check if modified
-                                int objCount = m_ObjectCount;
-                                int compCount = m_ComponentCount;
-
-                                // Load the scene
-                                var scene = EditorSceneManager.OpenScene(path);
-
-                                // Iterate through objects and modify
-                                GameObject[] objects = scene.GetRootGameObjects();
-                                foreach (var obj in objects)
-                                    ProcessGameObject(obj, true);
-
-                                // Scene was modified
-                                if (m_ObjectCount > objCount || m_ComponentCount > compCount)
+                                try
                                 {
-                                    ++m_SceneCount;
-                                    //EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-                                    if (!EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), ""))
-                                        Debug.LogWarning("Failed to save scene: " + path);
+                                    // Record object & component counts to check if modified
+                                    int objCount = m_ObjectCount;
+                                    int compCount = m_ComponentCount;
+
+                                    // Load the scene
+                                    var scene = EditorSceneManager.OpenScene(path);
+
+                                    // Iterate through objects and modify
+                                    GameObject[] objects = scene.GetRootGameObjects();
+                                    foreach (var obj in objects)
+                                    {
+                                        if (obj != null)
+                                            ProcessGameObject(obj, true);
+                                    }
+
+                                    // Scene was modified
+                                    if (m_ObjectCount > objCount || m_ComponentCount > compCount)
+                                    {
+                                        ++m_SceneCount;
+                                        //EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+                                        if (!EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), ""))
+                                            Debug.LogWarning("Failed to save scene: " + path);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    m_Errors.Add(string.Format("Encountered error processing scene: \"{0}\", message: {1}", path, e.Message));
                                 }
                             }
                         }
@@ -629,26 +662,56 @@ namespace Yondernauts.LayerManager
                         Transform t = go.transform;
                         int childCount = t.childCount;
                         for (int i = 0; i < childCount; ++i)
-                            ProcessGameObject(t.GetChild(i).gameObject, inScene);
+                        {
+                            try
+                            {
+                                var child = t.GetChild(i);
+                                if (child == null)
+                                    continue;
+
+                                ProcessGameObject(child.gameObject, inScene);
+                            }
+                            catch (Exception e)
+                            {
+                                m_Errors.Add(string.Format("Encountered error processing GameObject child in scene: \"{0}\", child index: {1}, message: {2}", go.name, i, e.Message));
+                            }
+                        }
 
                         // Swap layer
-                        SerializedObject so = new SerializedObject(go);
-                        var layerProp = so.FindProperty("m_Layer");
-                        int oldLayer = layerProp.intValue;
-                        int transformedLayer = TransformLayer(oldLayer, true);
-                        if (transformedLayer != oldLayer)
+                        try
                         {
-                            layerProp.intValue = transformedLayer;
-                            so.ApplyModifiedPropertiesWithoutUndo();
-                            ++m_ObjectCount;
+                            SerializedObject so = new SerializedObject(go);
+                            var layerProp = so.FindProperty("m_Layer");
+                            int oldLayer = layerProp.intValue;
+                            int transformedLayer = TransformLayer(oldLayer, true);
+                            if (transformedLayer != oldLayer)
+                            {
+                                layerProp.intValue = transformedLayer;
+                                so.ApplyModifiedPropertiesWithoutUndo();
+                                ++m_ObjectCount;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            m_Errors.Add(string.Format("Encountered error processing layer property on GameObject in scene: \"{0}\", message: {1}", go.name, e.Message));
                         }
 
                         // Process Components
                         Component[] components = go.GetComponents<Component>();
                         for (int i = 0; i < components.Length; ++i)
                         {
-                            if (ProcessSerializedObject(new SerializedObject(components[i])))
-                                ++m_ComponentCount;
+                            try
+                            {
+                                if (components[i] == null)
+                                    continue;
+
+                                if (ProcessSerializedObject(new SerializedObject(components[i])))
+                                    ++m_ComponentCount;
+                            }
+                            catch (Exception e)
+                            {
+                                m_Errors.Add(string.Format("Encountered error processing component on GameObject in scene: \"{0}\", component index: {1}, message: {2}", go.name, i, e.Message));
+                            }
                         }
                     }
                 }
@@ -675,12 +738,22 @@ namespace Yondernauts.LayerManager
             int childCount = t.childCount;
             for (int i = 0; i < childCount; ++i)
             {
-                var child = t.GetChild(i).gameObject;
-                var childRoot = PrefabUtility.GetNearestPrefabInstanceRoot(child);
-                if (childRoot != null)
-                    ProcessPrefabModifications(child);
-                else
-                    ProcessProjectPrefab(child);
+                try
+                {
+                    var child = t.GetChild(i).gameObject;
+                    if (child == null)
+                        continue;
+
+                    var childRoot = PrefabUtility.GetNearestPrefabInstanceRoot(child);
+                    if (childRoot != null)
+                        ProcessPrefabModifications(child);
+                    else
+                        ProcessProjectPrefab(child);
+                }
+                catch (Exception e)
+                {
+                    m_Errors.Add(string.Format("Encountered error processing prefab child object: \"{0}\", child index: {1}, message: {2}", go.name, i, e.Message));
+                }
             }
         }
 
@@ -709,23 +782,40 @@ namespace Yondernauts.LayerManager
         void ProcessPrefabGameObject(GameObject go)
         {
             // Swap layer
-            SerializedObject so = new SerializedObject(go);
-            var layerProp = so.FindProperty("m_Layer");
-            int oldLayer = layerProp.intValue;
-            int transformedLayer = TransformLayer(oldLayer, true);
-            if (transformedLayer != oldLayer)
+            try
             {
-                layerProp.intValue = transformedLayer;
-                so.ApplyModifiedPropertiesWithoutUndo();
-                ++m_ObjectCount;
+                SerializedObject so = new SerializedObject(go);
+                var layerProp = so.FindProperty("m_Layer");
+                int oldLayer = layerProp.intValue;
+                int transformedLayer = TransformLayer(oldLayer, true);
+                if (transformedLayer != oldLayer)
+                {
+                    layerProp.intValue = transformedLayer;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    ++m_ObjectCount;
+                }
+            }
+            catch (Exception e)
+            {
+                m_Errors.Add(string.Format("Encountered error processing layer property on prefab object: \"{0}\", message: {1}", go.name, e.Message));
             }
 
             // Process Components
             Component[] components = go.GetComponents<Component>();
             for (int i = 0; i < components.Length; ++i)
             {
-                if (ProcessSerializedObject(new SerializedObject(components[i])))
-                    ++m_ComponentCount;
+                try
+                {
+                    if (components[i] == null)
+                        continue;
+
+                    if (ProcessSerializedObject(new SerializedObject(components[i])))
+                        ++m_ComponentCount;
+                }
+                catch (Exception e)
+                {
+                    m_Errors.Add(string.Format("Encountered error processing components on prefab object: \"{0}\", component index: {1}, message: {2}", go.name, i, e.Message));
+                }
             }
         }
 
@@ -736,53 +826,61 @@ namespace Yondernauts.LayerManager
                 return;
 
             bool found = false;
-            foreach (var mod in mods)
+
+            try
             {
-                SerializedObject so = new SerializedObject(mod.target);
-                var itr = so.GetIterator();
-                string prev = string.Empty;
-                while (itr.Next(true))
+                foreach (var mod in mods)
                 {
-                    if (itr.propertyPath == mod.propertyPath)
+                    SerializedObject so = new SerializedObject(mod.target);
+                    var itr = so.GetIterator();
+                    string prev = string.Empty;
+                    while (itr.Next(true))
                     {
-                        if (so.targetObject.GetType() == typeof(GameObject))
+                        if (itr.propertyPath == mod.propertyPath)
                         {
-                            if (itr.name == "m_Layer")
+                            if (so.targetObject.GetType() == typeof(GameObject))
                             {
-                                Debug.Log("Found modified object layer on object: " + so.targetObject.name + ", type: " + itr.type);
-                                int oldLayer = itr.intValue;
-                                int transformedLayer = TransformLayer(oldLayer, true);
-                                if (transformedLayer != oldLayer)
+                                if (itr.name == "m_Layer")
                                 {
-                                    found = true;
-                                    mod.value = transformedLayer.ToString();
-                                }
-                            }
-                            else
-                            {
-                                if (prev == "LayerMask")
-                                {
-                                    found = true;
-                                    Debug.Log("Found modified LayerMask property: " + itr.propertyPath);
-                                    int oldMask = itr.intValue;
-                                    int transformedMask = TransformLayer(oldMask, true);
-                                    if (transformedMask != oldMask)
+                                    Debug.Log("Found modified object layer on object: " + so.targetObject.name + ", type: " + itr.type);
+                                    int oldLayer = itr.intValue;
+                                    int transformedLayer = TransformLayer(oldLayer, true);
+                                    if (transformedLayer != oldLayer)
                                     {
                                         found = true;
-                                        mod.value = transformedMask.ToString();
+                                        mod.value = transformedLayer.ToString();
                                     }
                                 }
+                                else
+                                {
+                                    if (prev == "LayerMask")
+                                    {
+                                        found = true;
+                                        Debug.Log("Found modified LayerMask property: " + itr.propertyPath);
+                                        int oldMask = itr.intValue;
+                                        int transformedMask = TransformLayer(oldMask, true);
+                                        if (transformedMask != oldMask)
+                                        {
+                                            found = true;
+                                            mod.value = transformedMask.ToString();
+                                        }
+                                    }
+                                }
+                                so.ApplyModifiedProperties();
+                                break;
                             }
-                            so.ApplyModifiedProperties();
-                            break;
+                            prev = itr.type;
                         }
-                        prev = itr.type;
                     }
                 }
-
-                if (found)
-                    PrefabUtility.SetPropertyModifications(go, mods);
             }
+            catch (Exception e)
+            {
+                m_Errors.Add(string.Format("Encountered error processing property modifications on prefab: \"{0}\", message: {1}", go.name, e.Message));
+            }
+
+            if (found)
+                PrefabUtility.SetPropertyModifications(go, mods);
         }
 
 #else
@@ -797,7 +895,20 @@ namespace Yondernauts.LayerManager
                 Transform t = go.transform;
                 int childCount = t.childCount;
                 for (int i = 0; i < childCount; ++i)
-                    ProcessGameObject(t.GetChild(i).gameObject, inScene);
+                {
+                    try
+                    {
+                        var child = t.GetChild(i);
+                        if (child == null)
+                            continue;
+
+                        ProcessGameObject(child.gameObject, inScene);
+                    }
+                    catch (Exception e)
+                    {
+                        m_Errors.Add(string.Format("Encountered error processing GameObject child: \"{0}\", child index: {1}, in scene: {2}, message: {3}", go.name, i, inScene, e.Message));
+                    }
+                }
 
                 // Swap layer
                 SerializedObject so = new SerializedObject(go);
@@ -815,8 +926,18 @@ namespace Yondernauts.LayerManager
                 Component[] components = go.GetComponents<Component>();
                 for (int i = 0; i < components.Length; ++i)
                 {
-                    if (ProcessSerializedObject(new SerializedObject(components[i])))
-                        ++m_ComponentCount;
+                    try
+                    {
+                        if (components[i] == null)
+                            continue;
+
+                        if (ProcessSerializedObject(new SerializedObject(components[i])))
+                            ++m_ComponentCount;
+                    }
+                    catch (Exception e)
+                    {
+                        m_Errors.Add(string.Format("Encountered error processing component on GameObject: \"{0}\", component index: {1}, in scene: {2}, message: {3}", go.name, i, inScene, e.Message));
+                    }
                 }
             }
             catch (Exception e)
@@ -867,7 +988,7 @@ namespace Yondernauts.LayerManager
             }
             catch (Exception e)
             {
-                m_Errors.Add(string.Format("Encountered error processing SerializedObject asset: \"{0}\", message: {1}", so.targetObject.name, e.Message));
+                m_Errors.Add(string.Format("Encountered error processing SerializedObject: \"{0}\", message: {1}", so.targetObject.name, e.Message));
             }
 
             return false;
