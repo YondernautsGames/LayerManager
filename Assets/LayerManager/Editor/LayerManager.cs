@@ -454,14 +454,16 @@ namespace Yondernauts.LayerManager
             Get2DLayerCollisionMatrix();
 
             // Get Tags and Layers settings
-            var tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
-            if (tagManager == null)
+            var asset = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0];
+            if (asset == null)
             {
                 // Complete with error
                 m_State = ManagerState.Complete;
                 m_CompletionReport = "Failed to process layer modifcations. Asset not found: ProjectSettings/TagManager.asset";
                 return;
             }
+
+            var tagManager = new SerializedObject(asset);
 
             // Get layer properties
             var layerProps = tagManager.FindProperty("layers");
@@ -646,6 +648,9 @@ namespace Yondernauts.LayerManager
 
         void ProcessGameObject(GameObject go, bool inScene)
         {
+            if (go == null)
+                return;
+
             try
             {
                 if (inScene)
@@ -781,6 +786,9 @@ namespace Yondernauts.LayerManager
 
         void ProcessPrefabGameObject(GameObject go)
         {
+            if (go == null)
+                return;
+
             // Swap layer
             try
             {
@@ -831,6 +839,9 @@ namespace Yondernauts.LayerManager
             {
                 foreach (var mod in mods)
                 {
+                    if (mod.target == null)
+                        continue;
+
                     SerializedObject so = new SerializedObject(mod.target);
                     var itr = so.GetIterator();
                     string prev = string.Empty;
@@ -842,7 +853,7 @@ namespace Yondernauts.LayerManager
                             {
                                 if (itr.name == "m_Layer")
                                 {
-                                    Debug.Log("Found modified object layer on object: " + so.targetObject.name + ", type: " + itr.type);
+                                    //Debug.Log("Found modified object layer on object: " + so.targetObject.name + ", type: " + itr.type);
                                     int oldLayer = itr.intValue;
                                     int transformedLayer = TransformLayer(oldLayer, true);
                                     if (transformedLayer != oldLayer)
@@ -856,7 +867,7 @@ namespace Yondernauts.LayerManager
                                     if (prev == "LayerMask")
                                     {
                                         found = true;
-                                        Debug.Log("Found modified LayerMask property: " + itr.propertyPath);
+                                        //Debug.Log("Found modified LayerMask property: " + itr.propertyPath);
                                         int oldMask = itr.intValue;
                                         int transformedMask = TransformLayer(oldMask, true);
                                         if (transformedMask != oldMask)
@@ -1062,7 +1073,15 @@ namespace Yondernauts.LayerManager
             try
             {
                 // Get dynamics manager asset
-                var dynamicsManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/DynamicsManager.asset")[0]);
+                var asset = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/DynamicsManager.asset")[0];
+                if (asset == null)
+                {
+                    m_Errors.Add("Failed to read physics layer collision matrix. Asset file was missing or null");
+                    m_PhysicsMasks = null;
+                    return;
+                }
+
+                var dynamicsManager = new SerializedObject(asset);
                 if (dynamicsManager == null)
                     return;
 
@@ -1209,12 +1228,14 @@ namespace Yondernauts.LayerManager
             try
             {
                 // Get dynamics manager asset
-                var dynamicsManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/Physics2DSettings.asset")[0]);
-                if (dynamicsManager == null)
+                var asset = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/Physics2DSettings.asset")[0];
+                if (asset == null)
                 {
                     m_Errors.Add("Failed to process physics 2D layer collision matrix. Asset not found: ProjectSettings/Physics2DSettings.asset");
                     return;
                 }
+
+                var dynamicsManager = new SerializedObject(asset);
 
                 // Get collision matrix property
                 var matrixProp = dynamicsManager.FindProperty("m_LayerCollisionMatrix");
