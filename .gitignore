@@ -1,8 +1,12 @@
 
+Library/*
 Logs/*
 obj/*
 Packages/*
 UnityPackageManager/*
+
+Assets/AssetStoreTools
+Assets/AssetStoreTools.meta
 
 .vs
 .vsconfig
