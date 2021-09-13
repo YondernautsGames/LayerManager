@@ -198,32 +198,21 @@ namespace Yondernauts.LayerManager
 
             // Draw instructions
             EditorGUILayout.HelpBox(instructions, MessageType.Info);
-            float helpHeight = GUILayoutUtility.GetLastRect().height + 8;
+            EditorGUILayout.Space();
 
             // Show reorganise list
-            float h = m_LayerList.elementHeight * 25;
-            var r = EditorGUILayout.GetControlRect(false, h + helpHeight + 52);
-            r.x = 8;
-            r.y = helpHeight;
-            r.height = h;
-            r.width -= 6;
-            m_LayerList.DoList(r);
+            m_LayerList.DoLayoutList();
 
-            // Show controls
-            r.y += r.height;
-            r.height = lineHeight + 8;
-
-            // Apply modifications
+            // Apply modifications button
             GUI.enabled = dirty && valid;
-            if (GUI.Button(r, "Apply Layer Modifications"))
+            if (GUILayout.Button("Apply Layer Modifications"))
                 m_State = ManagerState.Confirmation;
             GUI.enabled = true;
 
-            r.y += lineHeight + 12;
-
             // Reset modifications
-            if (GUI.Button(r, "Reset Layer Moditications"))
+            if (GUILayout.Button("Reset Layer Moditications"))
                 ResetData();
+            EditorGUILayout.Space();
 
             // End the scroll view
             EditorGUILayout.EndScrollView();

@@ -1,0 +1,10 @@
+
+Logs/*
+obj/*
+Packages/*
+UnityPackageManager/*
+
+.vs
+.vsconfig
+*.sln
+*.csproj
